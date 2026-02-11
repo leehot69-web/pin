@@ -158,25 +158,31 @@ export default function VaultScreen() {
         window.location.reload();
     };
 
+    const handleQuickLogin = async (demoPin: string) => {
+        setPinValue(demoPin);
+        setStatus('verifying');
+        await artificialHandshake('[ACCESO_TOTAL_DEMO...]');
+        setIdentity({
+            pin: demoPin,
+            userId: `demo-${demoPin}`,
+            identityKeyPub: 'demo-key',
+            isAuthenticated: true
+        });
+        const other = demoPin === '11111111' ? '22222222' : '11111111';
+        await setupDemoPair(demoPin, other);
+
+        setStatus('success');
+        crossTab.init(demoPin);
+        await new Promise(r => setTimeout(r, 600));
+        setCurrentScreen('chats');
+    };
+
     const handleAccess = useCallback(async () => {
         if (pinValue.length !== 8) return;
 
         // --- QUICK DEMO USERS ---
         if (pinValue === '11111111' || pinValue === '22222222') {
-            await artificialHandshake('[ACCESO_TOTAL_DEMO...]');
-            setIdentity({
-                pin: pinValue,
-                userId: `demo-${pinValue}`,
-                identityKeyPub: 'demo-key',
-                isAuthenticated: true
-            });
-            const other = pinValue === '11111111' ? '22222222' : '11111111';
-            await setupDemoPair(pinValue, other);
-
-            setStatus('success');
-            crossTab.init(pinValue);
-            await new Promise(r => setTimeout(r, 600));
-            setCurrentScreen('chats');
+            await handleQuickLogin(pinValue);
             return;
         }
 
@@ -385,6 +391,15 @@ export default function VaultScreen() {
                     </button>
                     <button className="vault-btn-ghost" onClick={handleResetApp} style={{ color: '#ff4444', borderColor: 'rgba(255, 68, 68, 0.3)' }}>
                         DESTRUIR_IDENTIDAD
+                    </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 20, width: '100%' }}>
+                    <button onClick={() => handleQuickLogin('11111111')} className="vault-btn-ghost" style={{ border: '1px solid #4CAF50', color: '#4CAF50', fontSize: 10 }}>
+                        [ ENT_USER_A (1111) ]
+                    </button>
+                    <button onClick={() => handleQuickLogin('22222222')} className="vault-btn-ghost" style={{ border: '1px solid #2196F3', color: '#2196F3', fontSize: 10 }}>
+                        [ ENT_USER_B (2222) ]
                     </button>
                 </div>
             </div>
