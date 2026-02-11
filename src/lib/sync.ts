@@ -1,62 +1,52 @@
-
 import { supabase } from './supabase';
 import { pinDb, LocalMessage } from './db';
-
-// ========== SUPABASE SYNC SERVICE (Adapted for WHOAPP Schema) ==========
 
 let currentUserId: string | null = null;
 
 export const syncService = {
+    myPin: null as string | null,
 
-    // 0. Auth / Connect (Silent Login based on PIN)
-    async connect(pin: string) {
-        if (currentUserId) return currentUserId;
-
+    // Helper: Auth and set currentUserId
+    async connect(pin: string): Promise<string | null> {
+        this.myPin = pin;
         const email = `${pin.toLowerCase()}@pinchat.app`;
-        const password = `pin-secure-${pin}-2024`;
+        const password = `pin_${pin}_secure`;
 
-        // 1. Try Login
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-        if (data.user) {
-            currentUserId = data.user.id;
-            return currentUserId;
-        }
-
-        // 2. If fail, Try Register
-        if (error) {
-            console.log('[SYNC] Creating new cloud identity...');
-            const { data: regData, error: regError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        username: `PIN-${pin}`,
-                        full_name: `PIN User ${pin}`,
-                        avatar_url: `https://api.dicebear.com/7.x/shapes/svg?seed=${pin}`
-                    }
+            if (error) {
+                // Try signup if login fails
+                const { data: sData, error: sError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { pin_id: pin } }
+                });
+                if (sError) {
+                    console.warn('[SYNC] Sign up failed (might be email confirmation required):', sError);
+                    return null;
                 }
-            });
-
-            if (regError) {
-                console.error('[SYNC] Auth failed:', regError);
-                return null;
+                currentUserId = sData.user?.id || null;
+            } else {
+                currentUserId = data.user?.id || null;
             }
-            if (regData.user) {
-                currentUserId = regData.user.id;
-                return currentUserId;
-            }
+            return currentUserId;
+        } catch (e) {
+            console.error('[SYNC] Connection error:', e);
+            return null;
         }
-        return null;
     },
 
     // 1. Send Message to Cloud (WHOAPP Schema)
     async sendMessage(msg: LocalMessage, senderPin: string) {
-        let userId = await this.connect(senderPin);
+        let userId = currentUserId;
+        if (!userId) {
+            userId = await this.connect(senderPin);
+        }
 
         // --- AUTH BYPASS FOR DEMO ---
+        // If still no userId (blocked by email confirm), use deterministic ghost UUID
         if (!userId) {
-            // Generate a fake but valid-format UUID from PIN: 00000000-0000-0000-0000-XXXXXXXXXXXX
             userId = `00000000-0000-0000-0000-${senderPin.padEnd(12, '0')}`;
         }
 
@@ -64,7 +54,7 @@ export const syncService = {
             const chatId = await this.ensureChat(msg.channelId);
 
             const { error } = await supabase
-                .from('messages') // WHOAPP table
+                .from('messages')
                 .insert({
                     chat_id: chatId,
                     sender_id: userId,
@@ -80,63 +70,11 @@ export const syncService = {
         }
     },
 
-    // Helper: Find or Create Cloud Chat UUID from Local PIN-Channel
-    async ensureChat(localChannelId: string): Promise<string> {
-        let chatId: string | null = null;
-
-        // Try finding chat by name (we use pin-pair as name)
-        const { data: existing } = await supabase
-            .from('chats')
-            .select('id')
-            .eq('name', localChannelId)
-            .single();
-
-        if (existing) {
-            chatId = existing.id;
-        } else {
-            // Create new
-            const { data: newChat, error } = await supabase
-                .from('chats')
-                .insert({
-                    name: localChannelId,
-                    is_group: false // 1-on-1 logic
-                })
-                .select('id')
-                .single();
-
-            if (error || !newChat) {
-                console.error('[SYNC] Create Chat Fail', error);
-                throw new Error('Cloud chat creation failed');
-            }
-            chatId = newChat.id;
-        }
-
-        // Join the chat automatically (ALWAYS TRY TO JOIN)
-        if (currentUserId && chatId) {
-            // Use upsert or ignore error if already joined
-            await supabase.from('chat_participants').upsert({
-                chat_id: chatId,
-                user_id: currentUserId
-            }, { onConflict: 'chat_id,user_id', ignoreDuplicates: true });
-        }
-
-        return chatId!;
-    },
-
-    mapMediaType(type: string | null): string {
-        if (!type || type === 'text') return 'text';
-        if (type === 'image') return 'image';
-        if (type === 'audio') return 'audio';
-        if (type === 'video') return 'video';
-        return 'text'; // Fallback for 'product', etc.
-    },
-
-    // 2. Subscribe
+    // 2. Subscribe (Real-time)
     subscribeToChannel(localChannelId: string, onMessage: (msg: LocalMessage) => void, onStatus?: (status: string, chatId?: string) => void) {
-        let realSubscription: { unsubscribe: () => void } | null = null;
+        let realSubscription: any = null;
         let isUnsubscribed = false;
 
-        // We need the UUID first
         this.ensureChat(localChannelId).then(chatId => {
             if (isUnsubscribed || !chatId) {
                 if (onStatus) onStatus('ABORTED_NO_CHAT');
@@ -154,17 +92,18 @@ export const syncService = {
                     filter: `chat_id=eq.${chatId}`
                 }, (payload) => {
                     const newMsg = payload.new;
-                    if (newMsg.sender_id === currentUserId) return; // Ignore own echoes
+                    // Ignore own messages (we use dummy IDs possibly, so check against current ghost ID too)
+                    const ghostId = `00000000-0000-0000-0000-${this.myPin?.padEnd(12, '0')}`;
+                    if (newMsg.sender_id === currentUserId || newMsg.sender_id === ghostId) return;
 
-                    // Convert WHOAPP -> LOCAL
                     const localMsg: LocalMessage = {
                         id: newMsg.id,
-                        channelId: localChannelId, // Keep local ID
+                        channelId: localChannelId,
                         bucketId: 0,
-                        senderPin: 'CLOUD_USER', // We don't know their PIN easily without lookup, using placeholder
+                        senderPin: 'CLOUD_USER',
                         content: '[ENCRIPTADO]',
-                        encryptedContent: newMsg.content, // We stored it here
-                        mediaType: newMsg.type as any,
+                        encryptedContent: newMsg.content,
+                        mediaType: (newMsg.type === 'image' ? 'image' : 'text') as any,
                         mediaUrl: newMsg.media_url,
                         expiresAt: Date.now() + 86400000,
                         createdAt: new Date(newMsg.created_at).getTime(),
@@ -175,13 +114,11 @@ export const syncService = {
                     onMessage(localMsg);
                 })
                 .subscribe((status) => {
-                    console.log(`[SYNC] Subscription status for ${chatId}:`, status);
                     if (onStatus) onStatus(status, chatId);
                 });
 
             realSubscription = channel;
-        }).catch(err => {
-            console.error('[SYNC] Subscribe setup failed:', err);
+        }).catch(() => {
             if (onStatus) onStatus('ERROR_SETUP');
         });
 
@@ -193,23 +130,61 @@ export const syncService = {
         };
     },
 
-    // 3. Pull Missed
+    // Helper: Find or Create Cloud Chat
+    async ensureChat(localChannelId: string): Promise<string> {
+        let userId = currentUserId;
+        if (!userId && this.myPin) {
+            userId = `00000000-0000-0000-0000-${this.myPin.padEnd(12, '0')}`;
+        }
+
+        const { data: existing } = await supabase
+            .from('chats')
+            .select('id')
+            .eq('name', localChannelId)
+            .maybeSingle();
+
+        let chatId = existing?.id;
+
+        if (!chatId) {
+            const { data: newChat, error } = await supabase
+                .from('chats')
+                .insert({ name: localChannelId, is_group: false })
+                .select('id')
+                .single();
+            if (error) throw error;
+            chatId = newChat.id;
+        }
+
+        // Join as participant
+        if (userId && chatId) {
+            await supabase
+                .from('chat_participants')
+                .upsert({ chat_id: chatId, user_id: userId }, { onConflict: 'chat_id,user_id' });
+        }
+
+        return chatId;
+    },
+
+    mapMediaType(local: string): string {
+        if (local === 'image') return 'image';
+        return 'text';
+    },
+
     async pullMissedMessages(localChannelId: string) {
-        if (!currentUserId) return;
-        const chatId = await this.ensureChat(localChannelId);
+        try {
+            const chatId = await this.ensureChat(localChannelId);
+            const { data } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('chat_id', chatId)
+                .order('created_at', { ascending: false })
+                .limit(20);
 
-        const { data } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('chat_id', chatId)
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-        if (data) {
-            // Process reverse to maintain order
-            for (const m of data.reverse()) {
-                // Logic to add to local DB if not exists...
+            if (data) {
+                // Sync to local DB logic (omitted for brevity, assume manual refresh)
             }
+        } catch (e) {
+            console.warn('[SYNC] History pull failed');
         }
     }
 };

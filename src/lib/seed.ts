@@ -1,122 +1,96 @@
+import { pinDb } from './db';
 
-import { pinDb, LocalProduct, LocalChannel, LocalMessage, calculateBucketId } from './db';
+/**
+ * Seeds demo data for the first time
+ */
+export async function seedDemoData(myPin: string) {
+    const channels = await pinDb.getAllChannels();
+    if (channels.length > 0) return;
 
-// Datos de Prueba
-const DEMO_PRODUCTS: LocalProduct[] = [
-    {
-        id: 'prod-1',
-        name: 'Camisa PIN Retro',
-        price: '25.00',
-        imageUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400',
-        sellerPin: 'current-user', // Se reemplazará con el PIN real
-        category: 'Ropa',
-        createdAt: Date.now()
-    },
-    {
-        id: 'prod-2',
-        name: 'Auriculares Black',
-        price: '89.99',
-        imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
-        sellerPin: 'current-user',
-        category: 'Tecnología',
-        createdAt: Date.now()
-    },
-    {
-        id: 'prod-3',
-        name: 'Taza Minimalista',
-        price: '12.50',
-        imageUrl: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400',
-        sellerPin: 'current-user',
-        category: 'Hogar',
-        createdAt: Date.now()
+    console.log('[SEED] Initializing demo bots for node:', myPin);
+
+    const bots = [
+        { id: 'BOT-HELP', name: 'SOPORTE_TECNICO', pin: 'BOT-HELP' },
+        { id: 'BOT-SALE', name: 'VENTAS_AUTOMATICAS', pin: 'BOT-SALE' },
+        { id: 'BOT-INFO', name: 'SISTEMA_NOTIF', pin: 'BOT-INFO' }
+    ];
+
+    for (const bot of bots) {
+        const channelId = [myPin, bot.pin].sort().join('-');
+
+        await pinDb.saveChannel({
+            id: channelId,
+            participantA: myPin,
+            participantB: bot.pin,
+            lastMessage: 'Protocolo de bienvenida activado.',
+            lastMessageTime: Date.now(),
+            unreadCount: 0,
+            createdAt: Date.now()
+        });
+
+        await pinDb.addMessage({
+            id: `welcome-${bot.id}-${Date.now()}`,
+            channelId,
+            bucketId: 0,
+            senderPin: bot.pin,
+            content: `Hola. Soy ${bot.name}. Escribe para interactuar.`,
+            encryptedContent: 'ENCRIPTADO_DUMMY',
+            mediaType: 'text',
+            mediaUrl: null,
+            expiresAt: Date.now() + 86400000,
+            createdAt: Date.now(),
+            status: 'delivered',
+            syncedAt: Date.now()
+        });
     }
-];
 
-export async function seedDemoData(userPin: string) {
-    // 1. Verificar si ya hay productos
-    const existingProducts = await pinDb.getProducts();
-    if (existingProducts.length === 0) {
-        console.log('[SEED] Insertando productos de prueba...');
-        for (const prod of DEMO_PRODUCTS) {
-            await pinDb.saveProduct({ ...prod, sellerPin: userPin });
-        }
-    }
-
-    // 2. Verificar si ya hay chats
-    const existingChannels = await pinDb.getChannels();
-    const demoBotPins = ['BOT-HELP', 'BOT-SALE', 'BOT-INFO'];
-    const botNames = ['Soporte Técnico', 'Ventas Demo', 'Info General'];
-
-    // Crear chats con bots si no existen
-    for (let i = 0; i < demoBotPins.length; i++) {
-        const botPin = demoBotPins[i];
-        const channelId = [userPin, botPin].sort().join('-'); // Deterministic ID
-
-        const exists = existingChannels.find(c => c.id === channelId);
-        if (!exists) {
-            console.log(`[SEED] Creando chat con bot ${botNames[i]}`);
-
-            // Crear Canal
-            await pinDb.saveChannel({
-                id: channelId,
-                participantA: userPin,
-                participantB: botPin,
-                lastMessage: 'Bienvenido! Escribe algo para probar.',
-                lastMessageTime: Date.now(),
-                unreadCount: 1,
-                createdAt: Date.now()
-            });
-
-            // Crear Mensaje de Bienvenida
-            const msgId = `msg-welcome-${botPin}`;
-            await pinDb.addMessage({
-                id: msgId,
-                channelId,
-                bucketId: calculateBucketId(),
-                senderPin: botPin,
-                content: `Hola! Soy ${botNames[i]}. Escribe algo para probar la respuesta automática.`,
-                encryptedContent: 'Hola! Soy un bot.',
-                mediaType: 'text',
-                mediaUrl: null,
-                expiresAt: Date.now() + 86400000,
-                createdAt: Date.now(),
-                status: 'delivered',
-                syncedAt: Date.now()
-            });
-        }
+    // --- PRODUCT SEEDING ---
+    const productsCount = await pinDb.getAllProducts();
+    if (productsCount.length === 0) {
+        await pinDb.saveProduct({
+            id: 'prod-1',
+            name: 'TERMINAL_ENCRYPT_L1',
+            description: 'Acceso avanzado a redes cifradas.',
+            price: 499,
+            imageUrl: 'https://picsum.photos/seed/tech1/400/300',
+            category: 'HARDWARE',
+            stock: 10
+        });
+        await pinDb.saveProduct({
+            id: 'prod-2',
+            name: 'LICENSE_GHOST_MODE',
+            description: 'Invisibilidad total en la red.',
+            price: 99,
+            imageUrl: 'https://picsum.photos/seed/soft1/400/300',
+            category: 'SOFTWARE',
+            stock: 99
+        });
     }
 }
 
+/**
+ * Pre-configurador para la Demo Usuario A y Usuario B
+ */
 export async function setupDemoPair(myPin: string, otherPin: string) {
-    console.log(`[DEMO] Setting up pair: ${myPin} <-> ${otherPin}`);
+    console.log(`[DEMO] Setting up pair logic: ${myPin} <-> ${otherPin}`);
 
     const channelId = [myPin, otherPin].sort().join('-');
     const now = Date.now();
 
-    // 1. Crear Canal
-    await pinDb.saveChannel({
-        id: channelId,
-        participantA: myPin,
-        participantB: otherPin,
-        lastMessage: 'Chat de Prueba Iniciado',
-        lastMessageTime: now,
-        unreadCount: 0,
-        createdAt: now
-    });
+    // Solo creamos el canal si no existe
+    const existing = await pinDb.getChannel(channelId);
+    if (!existing) {
+        await pinDb.saveChannel({
+            id: channelId,
+            participantA: myPin,
+            participantB: otherPin,
+            lastMessage: 'ESPERANDO_CONEXION_NUBE...',
+            lastMessageTime: now,
+            unreadCount: 0,
+            createdAt: now
+        });
 
-    // 2. Mensaje inicial
-    await pinDb.addMessage({
-        id: `msg-demo-${now}`,
-        channelId,
-        bucketId: calculateBucketId(),
-        senderPin: otherPin,
-        content: 'Conexión de prueba establecida. ¡Hola!',
-        encryptedContent: 'Conexión de prueba establecida. ¡Hola!',
-        mediaType: 'text',
-        mediaUrl: null,
-        expiresAt: now + 86400000,
-        createdAt: now,
-        status: 'delivered',
-        syncedAt: now
-    });
+        // NO inyectamos mensajes aquí. 
+        // Queremos que el usuario escriba algo y lo vea llegar de verdad.
+    }
 }
