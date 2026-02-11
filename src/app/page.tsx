@@ -1,65 +1,129 @@
-import Image from "next/image";
+/**
+ * PIN App — Main Entry Point
+ * 
+ * Orchestrates screen navigation:
+ * Vault → Chats → Conversation
+ */
 
-export default function Home() {
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { usePinStore } from '@/store/pinStore';
+import { useConnectionManager } from '@/hooks/useConnectionManager';
+import { pinDb } from '@/lib/db';
+import VaultScreen from '@/components/VaultScreen';
+import ChatsScreen from '@/components/ChatsScreen';
+import ConversationScreen from '@/components/ConversationScreen';
+import SettingsScreen from '@/components/SettingsScreen';
+import { supabase } from '@/lib/supabase';
+
+export default function PinApp() {
+  const { currentScreen, identity } = usePinStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Connection manager (heartbeat, polling, etc.)
+  useConnectionManager();
+
+  // Init IndexedDB and check for existing session
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await pinDb.init();
+
+        // Implement Session Lease (30 days)
+        const lastAccess = localStorage.getItem('pin-last-usage');
+        const now = Date.now();
+        if (lastAccess) {
+          const diff = now - parseInt(lastAccess);
+          const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+          if (diff > thirtyDays) {
+            console.warn('[PIN] Sesión expirada por inactividad prolongada (30 días)');
+            await supabase.auth.signOut();
+            localStorage.clear();
+            // Recargar para limpiar estados
+            window.location.reload();
+            return;
+          }
+        }
+        localStorage.setItem('pin-last-usage', now.toString());
+
+      } catch (err) {
+        console.error('[PIN] DB init error:', err);
+      }
+      setIsLoading(false);
+    };
+    init();
+  }, []);
+
+  // Register service worker
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // SW registration failed — not critical
+      });
+    }
+  }, []);
+
+  // Online/Offline listeners
+  useEffect(() => {
+    const handleOnline = () => usePinStore.getState().setIsOnline(true);
+    const handleOffline = () => usePinStore.getState().setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Auto-lock timer
+  useEffect(() => {
+    if (currentScreen === 'vault' || !identity) return;
+
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      if (timeout) clearTimeout(timeout);
+
+      const lockMinutes = parseInt(localStorage.getItem('pin-auto-lock') || '5');
+      if (lockMinutes === 0) return; // 'Never'
+
+      timeout = setTimeout(() => {
+        console.log(`[PIN] Auto-locking after ${lockMinutes}m of inactivity`);
+        usePinStore.getState().setCurrentScreen('vault');
+      }, lockMinutes * 60 * 1000);
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(ev => window.addEventListener(ev, resetTimer));
+
+    resetTimer(); // Start initial timer
+
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetTimer));
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [currentScreen, identity]);
+
+  if (isLoading) {
+    return (
+      <div className="pin-app">
+        <div className="loading-screen">
+          <div className="loading-spinner" />
+          <p className="loading-text">Iniciando Bóveda...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="pin-app">
+      {currentScreen === 'vault' && <VaultScreen />}
+      {currentScreen === 'chats' && <ChatsScreen />}
+      {currentScreen === 'conversation' && <ConversationScreen />}
+      {currentScreen === 'settings' && <SettingsScreen />}
     </div>
   );
 }

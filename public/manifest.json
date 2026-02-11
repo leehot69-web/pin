@@ -1,0 +1,23 @@
+{
+    "name": "PIN — Encrypted Messaging",
+    "short_name": "PIN",
+    "description": "Privacy-first messaging with end-to-end encryption",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icon-512.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "communication",
+        "social"
+    ],
+    "prefer_related_applications": false
+}
