@@ -303,6 +303,8 @@ export default function ConversationScreen() {
         }
     }, [activeChannelId]);
 
+    const [debugInfo, setDebugInfo] = useState({ status: 'Wait...', chatId: '' });
+
     // --- CONEXION CHAT A SERVICIO DE SYNC ---
     useEffect(() => {
         if (!activeChannelId || !identity?.pin) return;
@@ -314,12 +316,21 @@ export default function ConversationScreen() {
         loadMessages();
 
         // --- REALTIME SUBSCRIPTION ---
-        // Escuchar mensajes de internet para este canal
-        const sub = syncService.subscribeToChannel(activeChannelId, (incomingMsg) => {
-            // Solo añadir si no es mío (aunque syncService ya filtra un poco)
-            if (incomingMsg.senderPin !== identity.pin) {
-                addMessage(incomingMsg);
+        const sub = syncService.subscribeToChannel(
+            activeChannelId,
+            (incomingMsg) => {
+                if (incomingMsg.senderPin !== identity.pin) {
+                    addMessage(incomingMsg);
+                }
+            },
+            (status: string, chatId?: string) => {
+                setDebugInfo(prev => ({ ...prev, status, chatId: chatId || prev.chatId }));
             }
+        );
+
+        // PULL HISTORY ON LOAD
+        syncService.pullMissedMessages(activeChannelId).then(() => {
+            loadMessages();
         });
 
         // Traer mensajes perdidos mientras estaba offline
@@ -370,8 +381,10 @@ export default function ConversationScreen() {
     const otherPin = getOtherPin();
     const demoName = getDemoName(otherPin);
 
+    const isBot = activeChannelId?.startsWith('BOT-');
+
     return (
-        <div className="conversation-screen screen-enter">
+        <div className="flex flex-col h-full relative bg-black">
             {/* Encabezado Técnico con Blur */}
             <header className="conv-header">
                 <button className="conv-back-btn" onClick={handleBack}>
@@ -390,7 +403,11 @@ export default function ConversationScreen() {
                         onClick={() => setShowChatSettings(!showChatSettings)}
                         style={{ border: 'none', background: 'transparent', opacity: showChatSettings ? 1 : 0.6 }}
                     >
-                        <span className="material-symbols-outlined" style={{ fontSize: 22 }}>history_toggle_off</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>lock</span>
+                        <span>{isBot ? 'AUTOMATED_AGENT' : 'E2EE_SECURE_CHANNEL'}</span>
+                        <span style={{ color: debugInfo.status === 'SUBSCRIBED' ? '#0f0' : '#f00', marginLeft: 8 }}>
+                            [{debugInfo.status}] {debugInfo.chatId ? `ID:${debugInfo.chatId.slice(0, 4)}...` : ''}
+                        </span>
                     </button>
 
                     {showChatSettings && (

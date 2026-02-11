@@ -135,13 +135,18 @@ export const syncService = {
     },
 
     // 2. Subscribe
-    subscribeToChannel(localChannelId: string, onMessage: (msg: LocalMessage) => void) {
+    subscribeToChannel(localChannelId: string, onMessage: (msg: LocalMessage) => void, onStatus?: (status: string, chatId?: string) => void) {
         let realSubscription: { unsubscribe: () => void } | null = null;
         let isUnsubscribed = false;
 
         // We need the UUID first
         this.ensureChat(localChannelId).then(chatId => {
-            if (isUnsubscribed || !chatId) return;
+            if (isUnsubscribed || !chatId) {
+                if (onStatus) onStatus('ABORTED_NO_CHAT');
+                return;
+            }
+
+            if (onStatus) onStatus('CONNECTING', chatId);
 
             const channel = supabase
                 .channel(`room:${chatId}`)
@@ -172,9 +177,15 @@ export const syncService = {
 
                     onMessage(localMsg);
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log(`[SYNC] Subscription status for ${chatId}:`, status);
+                    if (onStatus) onStatus(status, chatId);
+                });
 
             realSubscription = channel;
+        }).catch(err => {
+            console.error('[SYNC] Subscribe setup failed:', err);
+            if (onStatus) onStatus('ERROR_SETUP');
         });
 
         return {
