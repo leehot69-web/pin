@@ -45,24 +45,31 @@ export default function ChatsScreen() {
 
         const channelId = [identity.pin, targetPin].sort().join('-');
 
-        // Upsert Channel
-        await pinDb.saveChannel({
-            id: channelId,
-            participantA: identity.pin,
-            participantB: targetPin,
-            lastMessage: null,
-            lastMessageTime: Date.now(),
-            unreadCount: 0,
-            createdAt: Date.now()
-        });
+        try {
+            // Upsert Channel
+            await pinDb.saveChannel({
+                id: channelId,
+                participantA: identity.pin,
+                participantB: targetPin,
+                lastMessage: null,
+                lastMessageTime: Date.now(),
+                unreadCount: 0,
+                createdAt: Date.now()
+            });
 
-        // Load & Open
-        await loadChannels();
-        const newCh = await pinDb.getChannel(channelId);
-        if (newCh) openChat(newCh);
+            // Load & Open
+            await loadChannels();
+            const newCh = await pinDb.getChannel(channelId);
 
-        setShowNewChatModal(false);
-        setNewChatPin('');
+            setShowNewChatModal(false);
+            setNewChatPin('');
+
+            if (newCh) openChat(newCh);
+        } catch (e: any) {
+            console.error('Failed to create chat', e);
+            alert('ERROR_CHAT_CREATION: ' + (e.message || 'Unknown'));
+            setShowNewChatModal(false);
+        }
     };
 
     useEffect(() => {

@@ -167,6 +167,15 @@ export default function VaultScreen() {
         if (loaded) {
             setStatusText('[ESTABLECIENDO_SESION...]');
             await registerOnServer(pinValue);
+
+            // FORCE SET IDENTITY
+            setIdentity({
+                pin: pinValue,
+                userId: 'local-user',
+                identityKeyPub: 'dummy',
+                isAuthenticated: true
+            });
+
             setStatus('success');
             crossTab.init(pinValue);
             await new Promise(r => setTimeout(r, 600));
@@ -186,6 +195,14 @@ export default function VaultScreen() {
             const { pin } = await createIdentity();
             setPinValue(pin);
             await registerOnServer(pin);
+
+            setIdentity({
+                pin,
+                userId: 'local-user',
+                identityKeyPub: 'dummy',
+                isAuthenticated: true
+            });
+
             setStatus('success');
             setStatusText(`IDENTIDAD_LISTA: ${pin}`);
             crossTab.init(pin);
