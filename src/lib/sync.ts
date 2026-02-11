@@ -77,8 +77,9 @@ export const syncService = {
             console.log('[SYNC] Sent to cloud:', msg.id);
             await pinDb.updateMessageStatus(msg.id, 'delivered'); // Mark as synced
 
-        } catch (e) {
+        } catch (e: any) {
             console.error('[SYNC] Send failed:', e);
+            alert(`CLOUD ERROR: ${e.message || 'Unknown'}`);
         }
     },
 
