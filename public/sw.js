@@ -7,7 +7,7 @@
  * - Background message notifications
  */
 
-const CACHE_NAME = 'pin-vault-v1';
+const CACHE_NAME = 'pin-vault-v2';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',

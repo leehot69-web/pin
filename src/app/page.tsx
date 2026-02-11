@@ -55,11 +55,15 @@ export default function PinApp() {
     init();
   }, []);
 
-  // Register service worker
+  // Register (or FORCE UNREGISTER) service worker
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        // SW registration failed — not critical
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister().then(() => {
+            console.log('[PIN] Service Worker Unregistered to clear cache');
+          });
+        }
       });
     }
   }, []);

@@ -409,6 +409,10 @@ export default function VaultScreen() {
             </div>
 
             {statusText && <div className={`vault-status ${status}`} style={{ marginTop: 20 }}>{statusText}</div>}
+
+            <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '8px', color: '#00ff41', opacity: 0.4 }}>
+                VERSIÓN_DEPURADA_V3_OK
+            </div>
         </div>
     );
 
