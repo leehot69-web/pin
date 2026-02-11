@@ -13,6 +13,7 @@ import { useSignalProtocol } from '@/hooks/useSignalProtocol';
 import { pinDb } from '@/lib/db';
 import { crossTab } from '@/lib/crossTab';
 import { supabase } from '@/lib/supabase';
+import { setupDemoPair } from '@/lib/seed';
 
 type Step = 'email' | 'otp' | 'identity_choice' | 'pin_access' | 'pin_create';
 
@@ -157,9 +158,27 @@ export default function VaultScreen() {
         window.location.reload();
     };
 
-    // ========== ACCESO CON PIN ==========
     const handleAccess = useCallback(async () => {
         if (pinValue.length !== 8) return;
+
+        // --- QUICK DEMO USERS ---
+        if (pinValue === '11111111' || pinValue === '22222222') {
+            await artificialHandshake('[ACCESO_TOTAL_DEMO...]');
+            setIdentity({
+                pin: pinValue,
+                userId: `demo-${pinValue}`,
+                identityKeyPub: 'demo-key',
+                isAuthenticated: true
+            });
+            const other = pinValue === '11111111' ? '22222222' : '11111111';
+            await setupDemoPair(pinValue, other);
+
+            setStatus('success');
+            crossTab.init(pinValue);
+            await new Promise(r => setTimeout(r, 600));
+            setCurrentScreen('chats');
+            return;
+        }
 
         await artificialHandshake('[DESCIFRANDO_BOVEDA...]');
         const loaded = await loadIdentity(pinValue);

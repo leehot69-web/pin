@@ -86,3 +86,37 @@ export async function seedDemoData(userPin: string) {
         }
     }
 }
+
+export async function setupDemoPair(myPin: string, otherPin: string) {
+    console.log(`[DEMO] Setting up pair: ${myPin} <-> ${otherPin}`);
+
+    const channelId = [myPin, otherPin].sort().join('-');
+    const now = Date.now();
+
+    // 1. Crear Canal
+    await pinDb.saveChannel({
+        id: channelId,
+        participantA: myPin,
+        participantB: otherPin,
+        lastMessage: 'Chat de Prueba Iniciado',
+        lastMessageTime: now,
+        unreadCount: 0,
+        createdAt: now
+    });
+
+    // 2. Mensaje inicial
+    await pinDb.addMessage({
+        id: `msg-demo-${now}`,
+        channelId,
+        bucketId: calculateBucketId(),
+        senderPin: otherPin,
+        content: 'Conexión de prueba establecida. ¡Hola!',
+        encryptedContent: 'Conexión de prueba establecida. ¡Hola!',
+        mediaType: 'text',
+        mediaUrl: null,
+        expiresAt: now + 86400000,
+        createdAt: now,
+        status: 'delivered',
+        syncedAt: now
+    });
+}
