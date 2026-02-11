@@ -130,6 +130,33 @@ export default function VaultScreen() {
         }
     };
 
+    const handleResetApp = async () => {
+        if (!confirm('PROTOCOL_WARNING:\n\nEsto borrará permanentemente tu identidad local (PIN) y mensajes.\n\n¿CONFIRMAS EL REINICIO DEL NODO?')) return;
+
+        try {
+            // @ts-ignore
+            if (window.indexedDB.databases) {
+                // @ts-ignore
+                const dbs = await window.indexedDB.databases();
+                // @ts-ignore
+                for (const db of dbs) {
+                    if (db.name) window.indexedDB.deleteDatabase(db.name);
+                }
+            }
+        } catch (e) {
+            console.error('Wipe failed', e);
+        }
+
+        // Fallback always
+        window.indexedDB.deleteDatabase('pinchat-db');
+
+        // Clear Storage
+        localStorage.clear();
+
+        // Reload
+        window.location.reload();
+    };
+
     // ========== ACCESO CON PIN ==========
     const handleAccess = useCallback(async () => {
         if (pinValue.length !== 8) return;
@@ -319,6 +346,9 @@ export default function VaultScreen() {
                     </button>
                     <button className="vault-btn-ghost" onClick={() => setStep('email')}>
                         _cambiar_identidad
+                    </button>
+                    <button className="vault-btn-ghost" onClick={handleResetApp} style={{ color: '#ff4444', borderColor: 'rgba(255, 68, 68, 0.3)' }}>
+                        DESTRUIR_IDENTIDAD
                     </button>
                 </div>
             </div>
