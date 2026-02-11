@@ -97,7 +97,11 @@ export default function ChatsScreen() {
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
                         </button>
-                        <h1 className="chats-header-title">PIN</h1>
+                        <img
+                            src="https://github.com/leehot69-web/pin/blob/master/Gemini_Generated_Image_fxd2lufxd2lufxd2-removebg-preview.png?raw=true"
+                            alt="Logo"
+                            style={{ width: 40, height: 'auto', marginLeft: 8 }}
+                        />
                     </div>
                     <div className="chats-header-badge">NODO_ENCRIPTADO_v4.2</div>
                 </div>

@@ -14,12 +14,16 @@
   --pin-surface-2: #050505;
   --pin-surface-3: #111111;
   --pin-border: #ffffff;
-  --pin-border-dim: rgba(255, 255, 255, 0.2);
-  --pin-border-muted: rgba(255, 255, 255, 0.1);
+  --pin-border-dim: rgba(255, 255, 255, 0.5);
+  /* Boosted from 0.2 */
+  --pin-border-muted: rgba(255, 255, 255, 0.3);
+  /* Boosted from 0.1 */
   --pin-white: #ffffff;
   --pin-text: #ffffff;
-  --pin-text-dim: #888888;
-  --pin-text-muted: #555555;
+  --pin-text-dim: #cccccc;
+  /* Boosted from #888 */
+  --pin-text-muted: #999999;
+  /* Boosted from #555 - Now readable */
   --pin-blue: #ffffff;
   /* Redirigido a blanco para el look high-contrast */
   --pin-blue-dim: rgba(255, 255, 255, 0.3);
@@ -261,6 +265,13 @@ body::before {
   background: rgba(255, 255, 255, 0.1);
   color: var(--pin-white);
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.pin-segment:active,
+.pin-segment.active-touch {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+  transition: transform 0.05s ease;
 }
 
 .animate-pulse {

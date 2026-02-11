@@ -185,8 +185,12 @@ export default function VaultScreen() {
     const renderEmailStep = () => (
         <div className="vault-screen animate-in fade-in duration-500">
             <div className="vault-logo">
+                <img
+                    src="https://github.com/leehot69-web/pin/blob/master/Gemini_Generated_Image_fxd2lufxd2lufxd2-removebg-preview.png?raw=true"
+                    alt="Logo"
+                    style={{ width: 120, height: 'auto', marginBottom: 16 }}
+                />
                 <span className="vault-subtitle">RED_DE_NODOS_CIFRADOS</span>
-                <h1 className="vault-title" style={{ fontSize: 56 }}>PIN</h1>
             </div>
 
             <form onSubmit={handleEmailSubmit} style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -227,8 +231,12 @@ export default function VaultScreen() {
     const renderOtpStep = () => (
         <div className="vault-screen">
             <div className="vault-logo">
+                <img
+                    src="https://github.com/leehot69-web/pin/blob/master/Gemini_Generated_Image_fxd2lufxd2lufxd2-removebg-preview.png?raw=true"
+                    alt="Logo"
+                    style={{ width: 80, height: 'auto', marginBottom: 16 }}
+                />
                 <span className="vault-subtitle">LLAVE_TEMPORAL</span>
-                <h1 className="vault-title" style={{ fontSize: 56 }}>OTP</h1>
             </div>
 
             <form onSubmit={handleOtpSubmit} style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 32, alignItems: 'center' }}>
@@ -260,9 +268,13 @@ export default function VaultScreen() {
 
     const renderPinStep = () => (
         <div className="vault-screen">
-            <div className="vault-logo">
-                <span className="vault-subtitle">BOVEDA_BLOQUEADA</span>
-                <h1 className="vault-title" style={{ fontSize: 56 }}>PIN</h1>
+            <div className="vault-logo" style={{ marginTop: 40 }}>
+                <img
+                    src="https://github.com/leehot69-web/pin/blob/master/Gemini_Generated_Image_fxd2lufxd2lufxd2-removebg-preview.png?raw=true"
+                    alt="Logo"
+                    style={{ width: 100, height: 'auto', marginBottom: 16 }}
+                />
+                <h1 className="vault-title" style={{ fontSize: 24, letterSpacing: 2 }}>{step === 'pin_create' ? 'NUEVO_NODO' : 'SYSTEM_ACCESS'}</h1>
             </div>
 
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
@@ -290,14 +302,20 @@ export default function VaultScreen() {
                     className="pin-hidden-input"
                     type="text"
                     value={pinValue}
-                    onChange={(e) => setPinValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                    onChange={(e) => {
+                        const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+                        if (val.length > pinValue.length) {
+                            handleSegmentTouch(val.length - 1);
+                        }
+                        setPinValue(val);
+                    }}
                     maxLength={8}
                     autoFocus
                 />
 
                 <div className="vault-actions" style={{ marginTop: 16 }}>
                     <button className="vault-btn primary" onClick={handleAccess} disabled={pinValue.length !== 8 || status === 'verifying'}>
-                        {status === 'verifying' ? 'DESCIFRANDO...' : 'ABRIR_BOVEDA_SEGURA'}
+                        {status === 'verifying' ? 'DESCIFRANDO...' : 'INTRO'}
                     </button>
                     <button className="vault-btn-ghost" onClick={() => setStep('email')}>
                         _cambiar_identidad

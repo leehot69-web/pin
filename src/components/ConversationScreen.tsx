@@ -13,9 +13,10 @@
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { usePinStore } from '@/store/pinStore';
-import { pinDb, calculateBucketId, type LocalMessage } from '@/lib/db';
+import { pinDb, LocalMessage, LocalChannel, calculateBucketId } from '@/lib/db';
 import { getDemoName } from '@/lib/demo';
 import { crossTab, type CrossTabMessage } from '@/lib/crossTab';
+import { syncService } from '@/lib/sync'; // Integración Nube
 import { formatDuration } from '@/lib/media';
 import ChatInput from './ChatInput';
 import ProductCard from './ProductCard';
@@ -227,9 +228,17 @@ export default function ConversationScreen() {
                     content;
         await pinDb.updateChannelLastMessage(activeChannelId, preview, now);
 
+        await pinDb.updateChannelLastMessage(activeChannelId, preview, now);
+
         setTimeout(() => updateMessageStatus(msgId, 'sent'), 300);
 
-        // Enviar a la otra pestaña
+        // --- CLOUD SYNC ---
+        // Enviar a Supabase para que el amigo lo vea "desde afuera"
+        syncService.sendMessage(localMsg, identity.pin).catch(err => {
+            console.warn('[CLOUD] Fallo envio nube, se reintentará luego', err);
+        });
+
+        // Enviar a la otra pestaña (Local Sync)
         crossTab.broadcast({
             type: 'message',
             channelId: activeChannelId,
@@ -269,6 +278,34 @@ export default function ConversationScreen() {
             crossTab.sendTyping(activeChannelId, true);
         }
     }, [activeChannelId]);
+
+    // --- CONEXION CHAT A SERVICIO DE SYNC ---
+    useEffect(() => {
+        if (!activeChannelId || !identity?.pin) return;
+
+        const loadMessages = async () => {
+            const msgs = await pinDb.getMessagesByChannel(activeChannelId);
+            usePinStore.getState().setMessages(msgs);
+        };
+        loadMessages();
+
+        // --- REALTIME SUBSCRIPTION ---
+        // Escuchar mensajes de internet para este canal
+        const sub = syncService.subscribeToChannel(activeChannelId, (incomingMsg) => {
+            // Solo añadir si no es mío (aunque syncService ya filtra un poco)
+            if (incomingMsg.senderPin !== identity.pin) {
+                addMessage(incomingMsg);
+            }
+        });
+
+        // Traer mensajes perdidos mientras estaba offline
+        syncService.pullMissedMessages(activeChannelId).catch(console.error);
+
+        return () => {
+            sub.unsubscribe();
+        };
+
+    }, [activeChannelId, identity, addMessage]);
 
     const handleSetChannelExpiration = async (hours: number | undefined) => {
         if (!activeChannelId) return;
@@ -431,9 +468,62 @@ export default function ConversationScreen() {
                                         </div>
                                     )}
 
-                                    {/* TEXTO */}
+                                    {/* TEXTO / UBICACION */}
                                     {(msg.mediaType === 'text' || !msg.mediaType) && (
-                                        <p className="message-content">{msg.content}</p>
+                                        <>
+                                            {msg.content.startsWith('[LOCATION]:') ? (
+                                                <div className="location-card" style={{ width: '100%', minWidth: 200, overflow: 'hidden', borderRadius: 0 }}>
+                                                    {(() => {
+                                                        try {
+                                                            const parts = msg.content.replace('[LOCATION]:', '').trim().split(',');
+                                                            const lat = parts[0];
+                                                            const lon = parts[1];
+                                                            return (
+                                                                <>
+                                                                    <div style={{ height: 150, width: '100%', background: '#eee' }}>
+                                                                        <iframe
+                                                                            width="100%"
+                                                                            height="100%"
+                                                                            frameBorder="0"
+                                                                            scrolling="no"
+                                                                            marginHeight={0}
+                                                                            marginWidth={0}
+                                                                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lon) - 0.01}%2C${parseFloat(lat) - 0.01}%2C${parseFloat(lon) + 0.01}%2C${parseFloat(lat) + 0.01}&layer=mapnik&marker=${lat}%2C${lon}`}
+                                                                            style={{ border: 'none', filter: 'grayscale(100%) contrast(1.2)' }}
+                                                                        />
+                                                                    </div>
+                                                                    <div style={{ padding: 12, borderTop: '1px solid #333', background: '#000' }}>
+                                                                        <div className="vault-subtitle" style={{ fontSize: 9, color: '#fff', marginBottom: 4 }}>SHARED_COORDINATES</div>
+                                                                        <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#00f2ff' }}>{lat}, {lon}</div>
+                                                                        <a
+                                                                            href={`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            style={{
+                                                                                display: 'inline-block',
+                                                                                marginTop: 8,
+                                                                                background: '#fff',
+                                                                                color: '#000',
+                                                                                padding: '4px 8px',
+                                                                                fontSize: 9,
+                                                                                textDecoration: 'none',
+                                                                                fontWeight: 700
+                                                                            }}
+                                                                        >
+                                                                            OPEN_MAP
+                                                                        </a>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        } catch (e) {
+                                                            return <p className="message-content">{msg.content}</p>;
+                                                        }
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <p className="message-content">{msg.content}</p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 

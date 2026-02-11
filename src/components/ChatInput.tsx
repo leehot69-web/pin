@@ -50,6 +50,7 @@ const ChatInput = React.memo(function ChatInput({
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
     const [isCompressing, setIsCompressing] = useState(false);
     const [showMediaMenu, setShowMediaMenu] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     // Catalog state for picker
     const [myProducts, setMyProducts] = useState<LocalProduct[]>([]);
@@ -241,20 +242,20 @@ const ChatInput = React.memo(function ChatInput({
     // --- MODO: Grabando Audio ---
     if (mode === 'recording') {
         return (
-            <div className="input-container" style={{ padding: '8px 16px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
-                <div className="flex-1 flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+            <div className="input-container" style={{ padding: '8px 12px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                <div className="flex-1 flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#ff4444', animation: 'pulse 1.5s infinite' }}>mic</span>
-                        <span className="vault-subtitle" style={{ fontSize: 10, letterSpacing: 2 }}>{formatDuration(recordTime)}</span>
+                        <span className="vault-subtitle" style={{ fontSize: 10, letterSpacing: 2, color: '#fff' }}>{formatDuration(recordTime)}</span>
                     </div>
-                    <span className="vault-subtitle" style={{ fontSize: 8, opacity: 0.4 }}>_capturing_audio_stream...</span>
+                    <span className="vault-subtitle truncate" style={{ fontSize: 9, color: '#aaa' }}>_capturing...</span>
                 </div>
-                <div className="flex gap-4">
-                    <button className="vault-btn-ghost" onClick={handleCancelRecording} style={{ color: 'rgba(255,255,255,0.4)' }}>
-                        _cancel
+                <div className="flex gap-2 flex-shrink-0">
+                    <button className="vault-btn-ghost" onClick={handleCancelRecording} style={{ color: 'rgba(255,255,255,0.4)', padding: 4 }}>
+                        CANCEL
                     </button>
-                    <button className="vault-btn" onClick={handleStopRecording} style={{ padding: '6px 12px', fontSize: 9 }}>
-                        _stop_record
+                    <button className="vault-btn" onClick={handleStopRecording} style={{ padding: '6px 12px', fontSize: 9, width: 'auto' }}>
+                        STOP
                     </button>
                 </div>
             </div>
@@ -264,28 +265,29 @@ const ChatInput = React.memo(function ChatInput({
     // --- MODO: Preview Audio ---
     if (mode === 'preview-audio') {
         return (
-            <div className="input-container" style={{ padding: '8px 16px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
+            <div className="input-container" style={{ padding: '8px 12px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                 <audio ref={audioPreviewRef} hidden />
-                <div className="flex-1 flex items-center gap-4">
-                    <button onClick={handlePlayPreview} style={{ background: 'transparent', border: 'none', color: '#fff' }}>
+                <div className="flex-1 flex items-center gap-2 min-w-0">
+                    <button onClick={handlePlayPreview} style={{ background: 'transparent', border: 'none', color: '#fff', flexShrink: 0 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 24 }}>play_circle</span>
                     </button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-1 mb-1">
-                            {Array.from({ length: 30 }, (_, i) => (
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-1 overflow-hidden h-[16px]">
+                            {Array.from({ length: 20 }, (_, i) => (
                                 <div key={i} style={{
                                     width: 2, height: 4 + Math.random() * 12,
-                                    background: 'rgba(255,255,255,0.3)', borderRadius: 1
+                                    background: 'rgba(255,255,255,0.3)', borderRadius: 1,
+                                    flexShrink: 0
                                 }} />
                             ))}
                         </div>
-                        <span className="vault-subtitle" style={{ fontSize: 8, opacity: 0.5 }}>{formatDuration(previewAudioDuration)} · _ready_to_transmit</span>
+                        <span className="vault-subtitle" style={{ fontSize: 8, opacity: 0.5 }}>{formatDuration(previewAudioDuration)}</span>
                     </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2 flex-shrink-0 items-center">
                     <button className="material-symbols-outlined" onClick={handleDiscardAudio} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20 }}>delete</button>
-                    <button className="send-btn-label" onClick={handleSendAudio}>
-                        SEND_FILE
+                    <button onClick={handleSendAudio} style={{ background: '#fff', color: '#000', border: 'none', padding: '6px 12px', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 10 }}>
+                        SEND
                     </button>
                 </div>
             </div>
@@ -293,11 +295,12 @@ const ChatInput = React.memo(function ChatInput({
     }
 
     // --- MODO: Preview Imagen ---
+    // --- MODO: Preview Imagen ---
     if (mode === 'preview-image') {
         return (
-            <div className="input-container" style={{ padding: '12px 16px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
-                <div className="flex-1 flex items-center gap-4">
-                    <div style={{ width: 44, height: 44, border: '0.5px solid #fff', overflow: 'hidden' }}>
+            <div className="input-container" style={{ padding: '12px', background: 'var(--pin-black)', borderTop: '0.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                <div className="flex-1 flex items-center gap-3 min-w-0">
+                    <div style={{ width: 40, height: 40, border: '0.5px solid #fff', overflow: 'hidden', flexShrink: 0 }}>
                         {isCompressing ? (
                             <div className="w-full h-full flex items-center justify-center bg-white/5">
                                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>sync</span>
@@ -306,17 +309,31 @@ const ChatInput = React.memo(function ChatInput({
                             <img src={previewImageUrl || ''} alt="Preview" className="w-full h-full object-cover grayscale" />
                         )}
                     </div>
-                    <div>
-                        <span className="vault-subtitle" style={{ fontSize: 10 }}>IMAGE_PAYLOAD_READY</span>
-                        <p className="vault-subtitle" style={{ fontSize: 7, opacity: 0.4 }}>_compression_algorithm_v4.2_applied</p>
+                    <div className="min-w-0">
+                        <span className="vault-subtitle truncate block" style={{ fontSize: 10, color: '#fff' }}>IMAGE_READY</span>
+                        <p className="vault-subtitle truncate block" style={{ fontSize: 8, color: '#aaa' }}>_v4.2_compressed</p>
                     </div>
                 </div>
-                <div className="flex gap-4">
-                    <button className="vault-btn-ghost" onClick={handleDiscardImage} style={{ color: 'rgba(255,255,255,0.4)' }}>
-                        _discard
+                <div className="flex gap-3 flex-shrink-0 items-center">
+                    <button className="vault-btn-ghost" onClick={handleDiscardImage} style={{ color: 'rgba(255,255,255,0.4)', padding: 4 }}>
+                        DEL
                     </button>
-                    <button className="send-btn-label" onClick={handleSendImage} disabled={isCompressing}>
-                        TRANSMIT
+                    <button
+                        onClick={handleSendImage}
+                        disabled={isCompressing}
+                        style={{
+                            background: '#fff',
+                            color: '#000',
+                            border: 'none',
+                            padding: '8px 16px',
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            fontSize: 10,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        SEND
                     </button>
                 </div>
             </div>
@@ -326,30 +343,94 @@ const ChatInput = React.memo(function ChatInput({
     // --- MODO: Texto Normal (Estilo WhatsApp) ---
     return (
         <div className="relative">
-            {/* Popover Media Menu */}
-            {showMediaMenu && (
-                <div className="absolute bottom-full left-0 mb-4 bg-white border border-gray-200 rounded-3xl p-3 flex flex-col gap-1 z-[9999] shadow-2xl min-w-[220px]">
-                    {showProductPicker ? (
-                        <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto">
+            {/* Emoji/Sticker Panel */}
+            {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 mb-4 bg-[#111] border border-white/10 p-2 z-[9999] shadow-2xl w-full max-w-[320px] animate-in slide-in-from-bottom-2 duration-200" style={{ height: 250, overflowY: 'auto' }}>
+                    <div className="vault-subtitle mb-2" style={{ fontSize: 9, opacity: 0.5, textAlign: 'center' }}>ANIMATED_STICKERS_PACK_V1</div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {['😂', '❤️', '🔥', '👍', '🎉', '👀', '💩', '🚀', '💀', '😭', '😍', '🤯', '👋', '🙅', '🤮', '🤖'].map(emoji => (
                             <button
-                                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-xl mb-2 text-black"
-                                onClick={() => setShowProductPicker(false)}
+                                key={emoji}
+                                className="aspect-square flex items-center justify-center hover:bg-white/5 transition-colors group"
+                                onClick={() => {
+                                    onSend(emoji); // Send as solo emoji
+                                    setShowEmojiPicker(false);
+                                }}
                                 style={{ border: 'none', background: 'transparent' }}
                             >
-                                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
-                                <span className="vault-subtitle" style={{ fontSize: 9, fontWeight: 700 }}>VOLVER</span>
+                                <span style={{ fontSize: 32, filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }} className="group-hover:scale-125 transition-transform duration-200 group-hover:animate-bounce">
+                                    {emoji}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Emoji/Sticker Panel */}
+            {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 mb-4 bg-[#111] border border-white/10 p-2 z-[9999] shadow-2xl w-full max-w-[320px] animate-in slide-in-from-bottom-2 duration-200" style={{ height: 250, overflowY: 'auto' }}>
+                    <div className="vault-subtitle mb-2" style={{ fontSize: 10, color: '#ccc', textAlign: 'center', letterSpacing: 1 }}>FLUENT_3D_STICKERS_PACK</div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {[
+                            { name: 'Risa', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Grinning%20Squinting%20Face.png' },
+                            { name: 'Amor', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Heart-Eyes.png' },
+                            { name: 'Llanto', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Loudly%20Crying%20Face.png' },
+                            { name: 'Fuego', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Fire.png' },
+                            { name: 'Bailando', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Man%20Dancing.png' },
+                            { name: 'Pensando', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Thinking%20Face.png' },
+                            { name: 'Sorpresa', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Astonished%20Face.png' },
+                            { name: 'Fiesta', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Partying%20Face.png' },
+                            { name: 'Cool', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Sunglasses.png' },
+                            { name: 'Mindblown', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Exploding%20Head.png' },
+                            { name: 'Fantasma', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Ghost.png' },
+                            { name: 'Robot', url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png' }
+                        ].map(sticker => (
+                            <button
+                                key={sticker.name}
+                                className="aspect-square flex items-center justify-center transition-transform group p-2"
+                                onClick={() => {
+                                    // Send as image because they are PNGs
+                                    onSendImage(sticker.url);
+                                    setShowEmojiPicker(false);
+                                }}
+                                style={{ border: 'none', background: 'transparent' }}
+                            >
+                                <img
+                                    src={sticker.url}
+                                    alt={sticker.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.2))' }}
+                                    className="group-hover:scale-125 transition-transform duration-200 group-hover:animate-bounce"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Popover Media Menu - TECH REDESIGN */}
+            {showMediaMenu && (
+                <div className="absolute bottom-full left-0 mb-4 bg-black border border-white/20 p-1 flex flex-col gap-1 z-[9999] shadow-2xl min-w-[240px] animate-in fade-in zoom-in-95 duration-200" style={{ borderRadius: 0 }}>
+                    {showProductPicker ? (
+                        <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                            <button
+                                className="flex items-center gap-2 p-3 hover:bg-white/10 text-white transition-colors"
+                                onClick={() => setShowProductPicker(false)}
+                                style={{ border: 'none', background: 'transparent', borderRadius: 0 }}
+                            >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+                                <span className="vault-subtitle" style={{ fontSize: 9 }}>BACK_TO_ROOT</span>
                             </button>
 
                             {myProducts.length === 0 ? (
                                 <div className="p-4 text-center">
-                                    <span className="vault-subtitle" style={{ fontSize: 9, opacity: 0.5 }}>SIN_PRODUCTOS</span>
-                                    <div className="vault-subtitle" style={{ fontSize: 7, opacity: 0.3, marginTop: 4 }}>CONFIGURA_TU_TIENDA_EN_AJUSTES</div>
+                                    <span className="vault-subtitle" style={{ fontSize: 9, opacity: 0.5 }}>DATABASE_EMPTY</span>
                                 </div>
                             ) : (
                                 myProducts.map((p: LocalProduct) => (
                                     <button
                                         key={p.id}
-                                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-2xl text-left text-black"
+                                        className="flex items-center gap-3 p-2 hover:bg-white/10 text-left text-white transition-colors"
                                         onClick={() => {
                                             const meta = JSON.stringify({
                                                 name: p.name,
@@ -360,14 +441,14 @@ const ChatInput = React.memo(function ChatInput({
                                             onSendProduct(meta);
                                             setShowMediaMenu(false);
                                         }}
-                                        style={{ border: 'none', background: 'transparent' }}
+                                        style={{ border: 'none', background: 'transparent', borderRadius: 0 }}
                                     >
-                                        <div style={{ width: 40, height: 40, background: '#eee', borderRadius: 8, overflow: 'hidden' }}>
+                                        <div style={{ width: 32, height: 32, background: '#111', border: '1px solid #333' }}>
                                             <img src={p.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         </div>
                                         <div className="flex-1 overflow-hidden">
-                                            <div style={{ fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name.toUpperCase()}</div>
-                                            <div style={{ fontSize: 9, color: '#2196F3', fontWeight: 700 }}>${p.price}</div>
+                                            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name.toUpperCase()}</div>
+                                            <div style={{ fontSize: 9, color: '#00f2ff' }}>${p.price}</div>
                                         </div>
                                     </button>
                                 ))
@@ -375,34 +456,97 @@ const ChatInput = React.memo(function ChatInput({
                         </div>
                     ) : (
                         <>
-                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-black" onClick={handlePickImage} style={{ border: 'none', background: 'transparent' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#2196F3' }}>image</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>GALERIA</span>
+                            {/* CAMARA REAL */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={() => {
+                                // Input File con capture="environment"
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'image/*';
+                                input.capture = 'environment'; // Abre cámara trasera directament
+                                input.onchange = (e: any) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        // Reusar lógica de compresión
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                            setPreviewImageUrl(ev.target?.result as string);
+                                            setMode('preview-image');
+                                            setShowMediaMenu(false);
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                };
+                                input.click();
+                            }} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#ff3b30] transition-colors" style={{ fontSize: 20 }}>photo_camera</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>CAMARA_DIRECTA</span>
                             </button>
-                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-black" onClick={() => alert('Feature coming soon')} style={{ border: 'none', background: 'transparent' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#4CAF50' }}>description</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>DOCUMENTO</span>
+
+                            {/* GALERIA */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={handlePickImage} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#00f2ff] transition-colors" style={{ fontSize: 20 }}>image</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>GALERIA_MEDIA</span>
                             </button>
-                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-black" onClick={() => alert('Feature coming soon')} style={{ border: 'none', background: 'transparent' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#FF9800' }}>person</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>CONTACTO</span>
+
+                            {/* DOCUMENTO (Simulado) */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={() => {
+                                // Simular input file
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.pdf,.doc,.docx,.txt';
+                                input.onchange = (e: any) => {
+                                    if (e.target.files[0]) alert(`[SYSTEM]: Archivo "${e.target.files[0].name}" listo para encriptar. (Demo)`);
+                                    setShowMediaMenu(false);
+                                };
+                                input.click();
+                            }} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#b400ff] transition-colors" style={{ fontSize: 20 }}>description</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>DOCUMENTO_ENCRIPTADO</span>
                             </button>
-                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-black" onClick={() => alert('Feature coming soon')} style={{ border: 'none', background: 'transparent' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#F44336' }}>location_on</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>UBICACION</span>
+
+                            {/* CONTACTO */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={() => {
+                                onSend(`[CONTACT_CARD]: User_ID_${Math.floor(Math.random() * 9999)}`);
+                                setShowMediaMenu(false);
+                            }} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#00ff9d] transition-colors" style={{ fontSize: 20 }}>person</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>COMPARTIR_CONTACTO</span>
                             </button>
-                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-black" onClick={() => alert('Feature coming soon')} style={{ border: 'none', background: 'transparent' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#9C27B0' }}>headset</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>AUDIOS</span>
+
+                            {/* UBICACION */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={() => {
+                                if ("geolocation" in navigator) {
+                                    navigator.geolocation.getCurrentPosition((pos) => {
+                                        // Format: [LOCATION]: lat,long
+                                        onSend(`[LOCATION]: ${pos.coords.latitude},${pos.coords.longitude}`);
+                                        setShowMediaMenu(false);
+                                    }, (err) => {
+                                        alert("Error obteniendo ubicación: " + err.message);
+                                    });
+                                } else {
+                                    alert("Geolocalización no soportada");
+                                }
+                            }} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#ff0055] transition-colors" style={{ fontSize: 20 }}>location_on</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>UBICACION_ACTUAL</span>
                             </button>
-                            <div style={{ height: 1, background: '#eee', margin: '4px 0' }} />
+
+                            {/* AUDIOS */}
+                            <button className="flex items-center gap-4 px-4 py-3 hover:bg-white/10 transition-colors text-white group" onClick={handleStartRecording} style={{ border: 'none', background: 'transparent', borderRadius: 0 }}>
+                                <span className="material-symbols-outlined group-hover:text-[#ffd700] transition-colors" style={{ fontSize: 20 }}>mic</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10 }}>NOTA_DE_VOZ</span>
+                            </button>
+
+                            <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+
+                            {/* TIENDA */}
                             <button
-                                className="flex items-center gap-4 px-4 py-3 bg-black hover:bg-gray-800 rounded-2xl transition-colors text-white"
+                                className="flex items-center gap-4 px-4 py-3 hover:bg-white/20 transition-colors text-white"
                                 onClick={() => setShowProductPicker(true)}
-                                style={{ border: 'none' }}
+                                style={{ border: 'none', background: '#111', borderRadius: 0 }}
                             >
-                                <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#FFD700' }}>storefront</span>
-                                <span className="vault-subtitle" style={{ fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: 1 }}>MY_TIENDA</span>
+                                <span className="material-symbols-outlined text-[#00f2ff]" style={{ fontSize: 20 }}>storefront</span>
+                                <span className="vault-subtitle" style={{ fontSize: 10, color: '#fff' }}>MI_CATALOGO</span>
                             </button>
                         </>
                     )}
@@ -410,24 +554,26 @@ const ChatInput = React.memo(function ChatInput({
             )}
 
             <div className="input-container">
-                {/* Botón Adjuntar (Círculo Blanco) */}
+                {/* Botón Emoji */}
                 <button
-                    className="wa-icon-circle"
-                    onClick={() => setShowMediaMenu(!showMediaMenu)}
-                    disabled={disabled}
+                    className="p-2 text-gray-400 hover:text-[#00f2ff] transition-colors"
+                    onClick={() => {
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowMediaMenu(false);
+                    }}
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: 24 }}>
-                        {showMediaMenu ? 'close' : 'add'}
-                    </span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 26 }}>mood</span>
                 </button>
 
-                {/* Botón Cámara (Círculo Blanco) */}
+                {/* Botón Adjuntar */}
                 <button
-                    className="wa-icon-circle"
-                    onClick={handleCaptureCamera}
-                    disabled={disabled}
+                    className={`p-2 transition-all duration-200 ${showMediaMenu ? 'rotate-45 text-[#00f2ff]' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => {
+                        setShowMediaMenu(!showMediaMenu);
+                        setShowEmojiPicker(false);
+                    }}
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: 24 }}>photo_camera</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 26 }}>add_circle</span>
                 </button>
 
                 {/* Área de Texto (Línea de escritura) */}
