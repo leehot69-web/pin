@@ -85,6 +85,8 @@ export const syncService = {
 
     // Helper: Find or Create Cloud Chat UUID from Local PIN-Channel
     async ensureChat(localChannelId: string): Promise<string> {
+        let chatId: string | null = null;
+
         // Try finding chat by name (we use pin-pair as name)
         const { data: existing } = await supabase
             .from('chats')
@@ -92,29 +94,36 @@ export const syncService = {
             .eq('name', localChannelId)
             .single();
 
-        if (existing) return existing.id;
+        if (existing) {
+            chatId = existing.id;
+        } else {
+            // Create new
+            const { data: newChat, error } = await supabase
+                .from('chats')
+                .insert({
+                    name: localChannelId,
+                    is_group: false // 1-on-1 logic
+                })
+                .select('id')
+                .single();
 
-        // Create new
-        const { data: newChat, error } = await supabase
-            .from('chats')
-            .insert({
-                name: localChannelId,
-                is_group: false // 1-on-1 logic
-            })
-            .select('id')
-            .single();
-
-        if (error || !newChat) throw new Error('Could not create cloud chat');
-
-        // Join the chat automatically
-        if (currentUserId) {
-            await supabase.from('chat_participants').insert({
-                chat_id: newChat.id,
-                user_id: currentUserId
-            });
+            if (error || !newChat) {
+                console.error('[SYNC] Create Chat Fail', error);
+                throw new Error('Cloud chat creation failed');
+            }
+            chatId = newChat.id;
         }
 
-        return newChat.id;
+        // Join the chat automatically (ALWAYS TRY TO JOIN)
+        if (currentUserId && chatId) {
+            // Use upsert or ignore error if already joined
+            await supabase.from('chat_participants').upsert({
+                chat_id: chatId,
+                user_id: currentUserId
+            }, { onConflict: 'chat_id,user_id', ignoreDuplicates: true });
+        }
+
+        return chatId!;
     },
 
     mapMediaType(type: string | null): string {
