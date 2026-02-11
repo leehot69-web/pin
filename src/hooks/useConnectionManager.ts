@@ -75,28 +75,29 @@ export function useConnectionManager() {
             if (connectionStatus !== 'active') return;
 
             const channel = supabase
-                .channel(`messages:${channelId}`)
+                .channel(`room:${channelId}`)
                 .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
                         schema: 'public',
                         table: 'messages',
-                        filter: `channel_id=eq.${channelId}`,
+                        filter: `chat_id=eq.${channelId}`,
                     },
                     async (payload) => {
                         const msg = payload.new;
-                        // Store in IndexedDB and update state
+
+                        // WHOAPP schema mapping: msg.content contains the encrypted data
                         const localMsg = {
                             id: String(msg.id),
-                            channelId: msg.channel_id,
-                            bucketId: msg.bucket_id,
-                            senderPin: msg.sender_pin,
-                            content: msg.encrypted_content, // will be decrypted by the component
-                            encryptedContent: msg.encrypted_content,
-                            mediaType: msg.media_type,
+                            channelId: msg.chat_id,
+                            bucketId: 0,
+                            senderPin: 'CLOUD',
+                            content: '[ENCRIPTADO]',
+                            encryptedContent: msg.content,
+                            mediaType: msg.type || 'text',
                             mediaUrl: msg.media_url,
-                            expiresAt: new Date(msg.expires_at).getTime(),
+                            expiresAt: Date.now() + 86400000,
                             createdAt: new Date(msg.created_at).getTime(),
                             status: 'delivered' as const,
                             syncedAt: Date.now(),
