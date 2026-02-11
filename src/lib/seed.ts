@@ -4,7 +4,7 @@ import { pinDb } from './db';
  * Seeds demo data for the first time
  */
 export async function seedDemoData(myPin: string) {
-    const channels = await pinDb.getAllChannels();
+    const channels = await pinDb.getChannels();
     if (channels.length > 0) return;
 
     console.log('[SEED] Initializing demo bots for node:', myPin);
@@ -45,7 +45,7 @@ export async function seedDemoData(myPin: string) {
     }
 
     // --- PRODUCT SEEDING ---
-    const productsCount = await pinDb.getAllProducts();
+    const productsCount = await pinDb.getProducts();
     if (productsCount.length === 0) {
         await pinDb.saveProduct({
             id: 'prod-1',
@@ -54,7 +54,8 @@ export async function seedDemoData(myPin: string) {
             price: 499,
             imageUrl: 'https://picsum.photos/seed/tech1/400/300',
             category: 'HARDWARE',
-            stock: 10
+            stock: 10,
+            createdAt: Date.now()
         });
         await pinDb.saveProduct({
             id: 'prod-2',
@@ -63,7 +64,8 @@ export async function seedDemoData(myPin: string) {
             price: 99,
             imageUrl: 'https://picsum.photos/seed/soft1/400/300',
             category: 'SOFTWARE',
-            stock: 99
+            stock: 99,
+            createdAt: Date.now()
         });
     }
 }

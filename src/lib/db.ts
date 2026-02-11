@@ -16,10 +16,12 @@ const DB_VERSION = 2;
 export interface LocalProduct {
     id: string;
     name: string;
+    description?: string;
     price: string | number;
     imageUrl: string;
-    sellerPin: string; // Quien es el dueño de este producto
+    sellerPin?: string; // Quien es el dueño de este producto (opcional para seed)
     category?: string;
+    stock?: number;
     createdAt: number;
 }
 
