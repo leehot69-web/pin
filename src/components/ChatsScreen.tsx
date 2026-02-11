@@ -9,6 +9,7 @@ import { usePinStore } from '@/store/pinStore';
 import { pinDb, type LocalChannel, type LocalProduct } from '@/lib/db';
 import { getDemoName } from '@/lib/demo';
 import ProductStories from './ProductStories';
+import { seedDemoData } from '@/lib/seed';
 
 export default function ChatsScreen() {
     const {
@@ -25,10 +26,54 @@ export default function ChatsScreen() {
     const [catalogProducts, setCatalogProducts] = useState<LocalProduct[]>([]);
     const [isViewingStories, setIsViewingStories] = useState(false);
 
+    // New Chat State
+    const [showNewChatModal, setShowNewChatModal] = useState(false);
+    const [newChatPin, setNewChatPin] = useState('');
+
+    const handleCreateChannel = async () => {
+        if (!identity?.pin) return;
+        const targetPin = newChatPin.trim().toUpperCase();
+
+        if (targetPin.length < 3) {
+            alert('INVALID_TARGET_PIN');
+            return;
+        }
+        if (targetPin === identity.pin) {
+            alert('ERR_SELF_TARGET');
+            return;
+        }
+
+        const channelId = [identity.pin, targetPin].sort().join('-');
+
+        // Upsert Channel
+        await pinDb.saveChannel({
+            id: channelId,
+            participantA: identity.pin,
+            participantB: targetPin,
+            lastMessage: null,
+            lastMessageTime: Date.now(),
+            unreadCount: 0,
+            createdAt: Date.now()
+        });
+
+        // Load & Open
+        await loadChannels();
+        const newCh = await pinDb.getChannel(channelId);
+        if (newCh) openChat(newCh);
+
+        setShowNewChatModal(false);
+        setNewChatPin('');
+    };
+
     useEffect(() => {
-        loadChannels();
-        loadCatalog();
-    }, []);
+        if (identity?.pin) {
+            // Seed demo data (bots, products) if empty
+            seedDemoData(identity.pin).then(() => {
+                loadChannels();
+                loadCatalog();
+            });
+        }
+    }, [identity]);
 
     const loadCatalog = async () => {
         const products = await pinDb.getProducts();
@@ -244,11 +289,47 @@ export default function ChatsScreen() {
                 {/* New Chat Button */}
                 <button
                     className="fixed bottom-28 right-6 w-14 h-14 bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-xl z-40"
-                    onClick={() => alert('NEW_PROTOCOL_CHANNEL_INITIATION_v4.2\n(Functionality under development)')}
+                    onClick={() => setShowNewChatModal(true)}
                 >
                     <span className="material-symbols-outlined" style={{ fontSize: 32 }}>add</span>
                 </button>
             </div>
+
+            {/* NEW CHAT MODAL */}
+            {showNewChatModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm bg-[#0a0a0a] border border-white/20 p-6 shadow-2xl relative">
+                        <button
+                            onClick={() => setShowNewChatModal(false)}
+                            className="absolute top-2 right-2 text-white/50 hover:text-white"
+                        >
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+
+                        <h3 className="vault-title" style={{ fontSize: 20, marginBottom: 4 }}>ESTABLISH_LINK</h3>
+                        <p className="vault-subtitle mb-6">ENTER_TARGET_PIN_IDENTITY</p>
+
+                        <div className="flex flex-col gap-4">
+                            <input
+                                type="text"
+                                placeholder="TARGET PIN (e.g. A1B2)"
+                                value={newChatPin}
+                                onChange={(e) => setNewChatPin(e.target.value.toUpperCase())}
+                                className="w-full bg-black border border-white/30 text-white p-3 font-mono text-center tracking-widest outline-none focus:border-white transition-colors"
+                                autoFocus
+                            />
+
+                            <button
+                                onClick={handleCreateChannel}
+                                disabled={!newChatPin}
+                                className="w-full bg-white text-black font-bold py-3 mt-2 hover:bg-gray-200 disabled:opacity-50"
+                            >
+                                INITIATE_PROTOCOL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Story Viewer Layer */}
             {isViewingStories && catalogProducts.length > 0 && (

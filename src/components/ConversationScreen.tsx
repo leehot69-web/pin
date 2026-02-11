@@ -17,6 +17,7 @@ import { pinDb, LocalMessage, LocalChannel, calculateBucketId } from '@/lib/db';
 import { getDemoName } from '@/lib/demo';
 import { crossTab, type CrossTabMessage } from '@/lib/crossTab';
 import { syncService } from '@/lib/sync'; // Integración Nube
+import { simulateBotResponse } from '@/lib/bots';
 import { formatDuration } from '@/lib/media';
 import ChatInput from './ChatInput';
 import ProductCard from './ProductCard';
@@ -249,10 +250,33 @@ export default function ConversationScreen() {
                 encryptedContent: localMsg.encryptedContent,
                 mediaType: mediaType || undefined,
                 mediaUrl: mediaUrl || undefined,
-                createdAt: now,
                 expiresAt,
             },
         });
+
+        // --- BOT SIMULATION ---
+        const otherPin = activeChannelId.replace(identity.pin, '').replace('-', '');
+        if (otherPin.startsWith('BOT-')) {
+            simulateBotResponse(otherPin, content, (isTyping) => { }, async (res) => {
+                const botMsg: LocalMessage = {
+                    id: `bot-${Date.now()}`,
+                    channelId: activeChannelId,
+                    bucketId,
+                    senderPin: otherPin,
+                    content: res,
+                    encryptedContent: res, // No encryption for demo
+                    mediaType: 'text',
+                    mediaUrl: null,
+                    expiresAt: now + 86400000,
+                    createdAt: Date.now(),
+                    status: 'delivered',
+                    syncedAt: Date.now()
+                };
+                await pinDb.addMessage(botMsg);
+                addMessage(botMsg);
+                await pinDb.updateChannelLastMessage(activeChannelId, res, Date.now());
+            });
+        }
     }, [activeChannelId, identity, addMessage, updateMessageStatus, channels]);
 
     // ---- Handlers específicos ----
