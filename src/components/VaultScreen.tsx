@@ -162,9 +162,13 @@ export default function VaultScreen() {
         setPinValue(demoPin);
         setStatus('verifying');
         await artificialHandshake('[ACCESO_TOTAL_DEMO...]');
+
+        // Use a valid UUID format for the ghost user
+        const ghostId = `00000000-0000-0000-0000-${demoPin.padEnd(12, '0')}`;
+
         setIdentity({
             pin: demoPin,
-            userId: `demo-${demoPin}`,
+            userId: ghostId,
             identityKeyPub: 'demo-key',
             isAuthenticated: true
         });
